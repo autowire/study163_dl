@@ -211,7 +211,7 @@ def parse_syllabus_icourse163(session, page):
 
     data = page.splitlines(True)
 
-    vid_reg = 'contentId=([0-9]+);.+contentType=1;.+name=\"(.+)\";'
+    vid_reg = 'contentId=([0-9]+);.+contentType=1;.+id=([0-9]+);.+name=\"(.+)\";.+\.termId=([0-9]+);'
     doc_id_reg = 'contentId=([0-9]+);.+contentType=3;'
     lecture_reg = 'contentId=null.+name=\"(.+)\";.+releaseTime='
     week_reg = 'contentId=null.+lessons=.+name=\"(.+)\";.+releaseTime='
@@ -258,18 +258,20 @@ def parse_syllabus_icourse163(session, page):
                 s3 = re.search(vid_reg, line)
                 if s3:
                     lecture_name = s3.group(2).decode('raw_unicode_escape')
-                    params =  {
-                            'callCount':'1',
-                            'scriptSessionId':'${scriptSessionId}100', #* , but arbitrarily
-                            'c0-scriptName':'CourseBean',
-                            'c0-methodName':'getLessonUnitLearnVo',
-                            'c0-id':'0',
-                            'c0-param0':'number:' + s3.group(1),
-                            'c0-param1':'number:1',
-                            'c0-param2':'number:0',
-                            'c0-param3':'number:251189',
-                            'batchId':'969403', #* , but arbitrarily
-                            }
+                    params = {
+                        'callCount': '1',
+                        'scriptSessionId': '${scriptSessionId}190',  # * , but arbitrarily
+                        'httpSessionId':'e9b42cf7cd92430a9295e0915c584209',# * , but arbitrarily
+                        'c0-scriptName': 'CourseBean',
+                        'c0-methodName': 'getLessonUnitLearnVo',
+                        'c0-id': '0',
+                        'c0-param0': 'number:'+s3.group(4) ,
+                        'c0-param1': 'number:'+ s3.group(1),
+                        'c0-param2': 'number:1',
+                        'c0-param3': 'number:0',
+                        'c0-param4': 'number:'+s3.group(2),
+                        'batchId': '1451101151271',  # * , but arbitrarily
+                    }
                     r = session.post(geturl_url, data = params, cookies = session.cookies)
 
                     s4 = re.search(r"{(?P<content>.*contentId.+)}", r.content)
