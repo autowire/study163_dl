@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 This module contains a set of functions to be used by others.
 Some of them are ripped from https://github.com/coursera-dl/
 """
-
 
 import time
 import math
@@ -14,11 +12,13 @@ import re
 import zlib
 import errno
 
+
 class DownloadProgress(object):
     """
     Report download progress.
     Ripped from https://github.com/coursera-dl/
     """
+
     def __init__(self, start, total):
         if total in [0, '0', None]:
             self._total = None
@@ -33,28 +33,35 @@ class DownloadProgress(object):
         self._finished = False
 
     def start(self):
+        # To set _time_now & _time_start
         self._time_now = time.time()
         self._time_start = self._time_now
 
     def stop(self):
+        # To set _time_now & _finished
         self._time_now = time.time()
         self._finished = True
+        # If total is not set, set _curent as _total
         if self._total is None:
             self._total = self._current
         self.report_progress()
+        # If not curent==total
         if self._total != self._current:
             raise Exception('Error: Stopped abnormally.')
 
     def read(self, bytes):
+        # Update time
         self._time_now = time.time()
+        # Update current
         self._current += bytes
+
         self.report_progress()
 
     def calc_percent(self):
         if self._total is None:
             return '--%'
         percentage = int(float(self._current) / float(self._total) * 100.0)
-        done = int(percentage/2)
+        done = int(percentage / 2)
         return '[{0: <50}] {1}%'.format(done * '>', percentage)
 
     def calc_speed(self):
@@ -77,11 +84,12 @@ class DownloadProgress(object):
         report = '\r{0: <56} {1: >20}'.format(percent, total_speed_report)
 
         if self._finished:
-            print report
+            print(report)
         else:
-            print (report + "\r"),
+            print(report + "\r"),
 
-        sys.stdout.flush()               
+        sys.stdout.flush()
+
 
 def format_bytes(bytes):
     """
@@ -115,20 +123,21 @@ def mkdir_p(path, mode=0o777):
         else:
             raise
 
-def download_file(session, url, filename):
 
+def download_file(session, url, filename):
     attempts_count = 0
     error_msg = ''
 
     while attempts_count < 2:
 
-        r = session.get(url, stream = True)
+        r = session.get(url, stream=True)
+        # if not succeed
         if r.status_code is not 200:
             if r.reason:
                 error_msg = r.reason + ' ' + str(r.status_code)
             else:
                 error_msg = 'HTTP Error ' + str(r.status_code)
-            
+
             if attempts_count + 1 < 2:
                 wait_interval = 2 ** (attempts_count + 1)
                 msg = 'Error downloading, will retry in {0} seconds ...'
@@ -140,13 +149,14 @@ def download_file(session, url, filename):
                 raise Exception('Connection Error: %s' % error_msg)
 
         content_length = r.headers.get('content-length')
+        # Create DownloadProcess here.       args: start total
         progress = DownloadProgress(0, content_length)
-        chunk_sz = 1048576 
+        chunk_sz = 1048576
 
         with open(filename, 'wb') as f:
             progress.start()
             while True:
-                data = r.raw.read(chunk_sz, decode_content=True)                   
+                data = r.raw.read(chunk_sz, decode_content=True)
                 if not data:
                     progress.stop()
                     break
@@ -156,14 +166,13 @@ def download_file(session, url, filename):
         break
 
 
-def resume_download_file(session, url, filename, overwrite = False):
-
+def resume_download_file(session, url, filename, overwrite=False):
     if os.path.exists(filename) and not overwrite:
         resume_len = os.path.getsize(filename)
         file_mode = 'ab'
     else:
-        resume_len = 0   
-        file_mode = 'wb'     
+        resume_len = 0
+        file_mode = 'wb'
 
     attempts_count = 0
     error_msg = ''
@@ -171,14 +180,14 @@ def resume_download_file(session, url, filename, overwrite = False):
     while attempts_count < 2:
 
         session.headers['Range'] = 'bytes=0-'
-        r = session.get(url, stream = True)
+        r = session.get(url, stream=True)
 
         if r.status_code != 200 and r.status_code != 206:
             if r.reason:
                 error_msg = r.reason + ' ' + str(r.status_code)
             else:
                 error_msg = 'HTTP Error ' + str(r.status_code)
-            
+
             if attempts_count + 1 < 2:
                 wait_interval = 2 ** (attempts_count + 1)
                 msg = 'Error downloading, will retry in {0} seconds ...'
@@ -188,26 +197,24 @@ def resume_download_file(session, url, filename, overwrite = False):
                 continue
             else:
                 raise Exception('Connection Error: %s' % error_msg)
-        
+
         total_length = r.headers.get('content-length')
 
         if resume_len != 0:
             if total_length is None or resume_len == int(total_length):
-                print ('Already downloaded.')
+                print('Already downloaded.')
                 break
 
         session.headers['Range'] = 'bytes=%d-' % (resume_len)
-        r = session.get(url, stream = True)  
-
-        
+        r = session.get(url, stream=True)
 
         progress = DownloadProgress(resume_len, total_length)
-        chunk_sz = 1048576 
+        chunk_sz = 1048576
 
         with open(filename, file_mode) as f:
             progress.start()
             while True:
-                data = r.raw.read(chunk_sz, decode_content=True)                   
+                data = r.raw.read(chunk_sz, decode_content=True)
                 if not data:
                     progress.stop()
                     break
@@ -218,10 +225,11 @@ def resume_download_file(session, url, filename, overwrite = False):
 
 
 def parse_args():
+    """
+    Argument Parser
+    """
+    parser = argparse.ArgumentParser(description='Download lecture material from mooc websites')
 
-    parser = argparse.ArgumentParser(description = 'Download lecture material from mooc websites')
-
-    
     parser.add_argument('-u',
                         '--username',
                         dest='username',
@@ -248,7 +256,6 @@ def parse_args():
                         default='.',
                         help='path to save the files')
 
-
     parser.add_argument('-o',
                         '--overwrite',
                         dest='overwrite',
@@ -256,28 +263,20 @@ def parse_args():
                         default=False,
                         help='whether existing files should be overwritten'
                              ' (default: False)')
-    
+
     args = parser.parse_args()
-    
+
     return args
 
 
 def clean_filename(s):
     """
-    Sanitize a string to be used as a filename.
-
-    If minimal_change is set to true, then we only strip the bare minimum of
-    characters that are problematic for filesystems (namely, ':', '/' and
-    '\x00', '\n').
+    Amend  string to legal filename
     """
-
     s = s.replace(':', '_') \
-        .replace('/', '_')\
+        .replace('/', '_') \
         .replace('\x00', '_')
-
     s = re.sub('[\n\\\*><\?\"\|\t]', '', s)
-    s = re.sub(' +$','', s)
-    s = re.sub('^ +','', s)
-
-
+    s = re.sub(' +$', '', s)  # 去尾空格
+    s = re.sub('^ +', '', s)  # 去首空格
     return s
